@@ -8,15 +8,15 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from lib import environ, data, models, common, validation
+from lib import environ, data, model, common, validation
 
 from tensorboardX import SummaryWriter
 
 BATCH_SIZE = 32
 BARS_COUNT = 10
 TARGET_NET_SYNC = 1000
-DEFAULT_STOCKS = "data/YNDX_160101_161231.csv"
-DEFAULT_VAL_STOCKS = "data/YNDX_150101_151231.csv"
+DEFAULT_STOCKS = "data/bitcoin_train.csv"
+DEFAULT_VAL_STOCKS = "data/bitcoin_valid.csv"
 
 GAMMA = 0.99
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         if args.year is not None:
             stock_data = data.load_year_data(args.year)
         else:
-            stock_data = {"YNDX": data.load_relative(args.data)}
+            stock_data = {"BTC": data.load_relative(args.data)}
         env = environ.StocksEnv(stock_data, bars_count=BARS_COUNT, reset_on_close=True, state_1d=False, volumes=False)
         env_tst = environ.StocksEnv(stock_data, bars_count=BARS_COUNT, reset_on_close=True, state_1d=False)
     elif os.path.isdir(args.data):
@@ -65,11 +65,11 @@ if __name__ == "__main__":
         raise RuntimeError("No data to train on")
     env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)
 
-    val_data = {"YNDX": data.load_relative(args.valdata)}
+    val_data = {"BTC": data.load_relative(args.valdata)}
     env_val = environ.StocksEnv(val_data, bars_count=BARS_COUNT, reset_on_close=True, state_1d=False)
 
     writer = SummaryWriter(comment="-simple-" + args.run)
-    net = models.SimpleFFDQN(env.observation_space.shape[0], env.action_space.n).to(device)
+    net = model.SimpleFFDQN(env.observation_space.shape[0], env.action_space.n).to(device)
     tgt_net = ptan.agent.TargetNet(net)
     selector = ptan.actions.EpsilonGreedyActionSelector(EPSILON_START)
     agent = ptan.agent.DQNAgent(net, selector, device=device)
